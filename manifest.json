@@ -1,9 +1,9 @@
 {
-	"id": "obsidian-custom-plugin-starter",
-	"name": "Custom Plugin Starter",
-	"version": "0.0.1",
-	"minAppVersion": "0.15.0",
-	"description": "This is a sample plugin for Obsidian. This plugin demonstrates some of the capabilities of the Obsidian API.",
+	"id": "collapse-node",
+	"name": "Collapse Node",
+	"version": "1.0.0",
+	"minAppVersion": "1.1.0",
+	"description": "Collapse node in canvas.",
 	"author": "Boninall",
 	"authorUrl": "https://github.com/Quorafind",
 	"fundingUrl": {
