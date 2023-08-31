@@ -1,12 +1,16 @@
 import "obsidian";
 import { App, Component, EventRef, ItemView, TFile } from "obsidian";
-import { CanvasNodeUnknownData } from "./canvas";
+import { CanvasDirection, CanvasNodeUnknownData } from "./canvas";
 import { CanvasData } from "obsidian/canvas";
 
 declare module "obsidian" {
 
     type CanvasNodeID = string;
     type CanvasEdgeID = string;
+
+    interface Menu {
+        setParentElement(parent: HTMLElement): Menu;
+    }
 
     interface MenuItem {
         setSubmenu(): Menu;
@@ -42,7 +46,12 @@ declare module "obsidian" {
         ): EventRef;
 
         on(
-            name: "collapse-plugin-disabled",
+            name: "collapse-node:plugin-disabled",
+            cb: () => any,
+        ): EventRef;
+
+        on(
+            name: "collapse-node:patched-canvas",
             cb: () => any,
         ): EventRef;
     }
@@ -55,7 +64,11 @@ declare module "obsidian" {
         ): void;
 
         trigger(
-            name: "collapse-plugin-disabled",
+            name: "collapse-node:plugin-disabled",
+        ): void;
+
+        trigger(
+            name: "collapse-node:patched-canvas",
         ): void;
     }
 
@@ -73,6 +86,8 @@ declare module "obsidian" {
         nodeInteractionLayer: CanvasInteractionLayer;
         selection: Set<CanvasNode>;
 
+        menu: CanvasMenu;
+
         wrapperEl: HTMLElement;
 
         history: any;
@@ -88,11 +103,44 @@ declare module "obsidian" {
         getEdgesForNode(node: CanvasNode): CanvasEdge[];
 
         getContainingNodes(coords: CanvasCoords): CanvasNode[];
+
+        deselectAll(): void;
+
+        select(nodes: CanvasNode): void;
+
+        requestFrame(): void;
     }
 
     interface ICanvasData {
         nodes: CanvasNode[];
         edges: CanvasEdge[];
+    }
+
+    interface CanvasMenu {
+        containerEl: HTMLElement;
+        menuEl: HTMLElement;
+        canvas: Canvas;
+        selection: CanvasSelection;
+
+        render(): void;
+
+        updateZIndex(): void;
+    }
+
+    interface CanvasSelection {
+        selectionEl: HTMLElement;
+        resizerEls: HTMLElement;
+        canvas: Canvas;
+        bbox: CanvasCoords | undefined;
+
+        render(): void;
+
+        hide(): void;
+
+        onResizePointerDown(e: PointerEvent, direction: CanvasDirection): void;
+
+        update(bbox: CanvasCoords): void;
+
     }
 
     interface CanvasInteractionLayer {

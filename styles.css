@@ -1,14 +1,16 @@
 .canvas-node-collapse-control {
-	z-index: 100;
-	position: relative;
+    z-index: 100;
+    position: relative;
 
-	overflow: hidden;
+    overflow: hidden;
 
-    width: 100%;
-    height: 40px;
-	max-height: 100px;
-	min-height: 20px;
-	cursor: pointer;
+    width: calc(100% * var(--zoom-multiplier));
+
+    min-width: 100%;
+    height: calc(40px * var(--zoom-multiplier));
+    /*max-height: 100px;*/
+    min-height: 20px;
+    cursor: pointer;
 
     display: flex;
     align-items: center;
@@ -17,9 +19,22 @@
     margin-top: -1px;
 }
 
+.canvas-node:not(.collapsed) .canvas-node-collapse-control {
+    background-color: rgba(var(--canvas-color), 0.15);
+}
+
+.canvas-node:not(.collapsed) .canvas-node-collapse-control:hover {
+    background-color: rgba(var(--canvas-color), 0.5);
+}
+
+.canvas-node.collapsed .canvas-node-collapse-control {
+    background-color: rgb(var(--canvas-color));
+}
+
+
 .canvas-node:has(.canvas-node-collapse-control) {
-	width: fit-content;
-	height: fit-content;
+    width: fit-content;
+    height: fit-content;
 }
 
 /*.canvas-node-group:not(.is-focused):not(.is-selected) {*/
@@ -34,27 +49,32 @@
 /*	border-radius: var(--radius-m);*/
 /*}*/
 
-.canvas-node-collapse-control {
-	background-color: rgb(var(--canvas-color));
+.canvas-node.collapsed {
+    height: calc(40px * var(--zoom-multiplier)) !important;
+    max-height: fit-content;
 }
 
-.canvas-node.collapsed {
-	height: 40px;
-	max-height: 40px;
+.canvas-node.collapsed .canvas-node-placeholder {
+    display: none;
 }
 
 .group-nodes-collapsed, .group-edges-collapsed {
-	display: none;
+    display: none;
 }
 
 .canvas-node.collapsed .canvas-node-content {
-	display: none;
+    display: none;
 }
 
 .collapsed-interaction {
-	height: 40px !important;
+    height: calc(40px * var(--zoom-multiplier)) !important;
 }
 
 .canvas-node-collapse-control-icon, .canvas-node-type-icon {
-	display: flex;
+    display: flex;
+}
+
+.canvas-node-collapse-control-icon svg, .canvas-node-type-icon svg {
+    height: calc(18px * var(--zoom-multiplier));
+    width: calc(18px * var(--zoom-multiplier));
 }

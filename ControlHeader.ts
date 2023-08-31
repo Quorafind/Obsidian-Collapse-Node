@@ -1,11 +1,10 @@
 import {
-    App,
     CanvasFileNode,
     CanvasGroupNode,
     CanvasLinkNode,
     CanvasNode,
     CanvasTextNode,
-    Component, ICanvasData,
+    Component,
     setIcon
 } from "obsidian";
 import { HeaderComponent } from "./types/custom";
@@ -22,16 +21,13 @@ export default class CollapseControlHeader extends Component implements HeaderCo
     private node: CanvasNode;
 
 
-    private freshHistory: boolean = false;
+    private refreshed: boolean = false;
     private containingNodes: any[] = [];
 
-    private app: App;
-
-    constructor(node: CanvasNode, app: App) {
+    constructor(node: CanvasNode) {
         super();
 
         this.node = node;
-        this.app = app;
         this.collapsed = node.unknownData.collapsed === undefined ? false : node.unknownData.collapsed;
     }
 
@@ -42,15 +38,12 @@ export default class CollapseControlHeader extends Component implements HeaderCo
         this.updateNodesInGroup();
         this.updateNode();
 
-        this.app.workspace.on("collapse-plugin-disabled", () => {
-            this.unload();
-        })
-
         return this.headerEl;
     }
 
     onunload() {
         super.onunload();
+        this.headerEl.empty();
         this.headerEl.detach();
     }
 
@@ -119,8 +112,21 @@ export default class CollapseControlHeader extends Component implements HeaderCo
         }
     }
 
+
+    setCollapsed(collapsed: boolean) {
+        if (this.node.canvas.readonly) return;
+        if (this.collapsed === collapsed) return;
+
+        this.collapsed = collapsed;
+        this.node.unknownData.collapsed = collapsed;
+
+        this.updateNodesInGroup();
+        this.updateNode();
+        this.updateEdges();
+    }
+
     refreshHistory() {
-        if (this.freshHistory) return;
+        if (this.refreshed) return;
 
         const history = this.node.canvas.history;
         if (!history || history.data.length === 0) return;
@@ -132,26 +138,16 @@ export default class CollapseControlHeader extends Component implements HeaderCo
                 }
             })
         });
-        this.freshHistory = true;
+        this.refreshed = true;
     }
 
-    setCollapsed(collapsed: boolean) {
+    async toggleCollapsed() {
         if (this.node.canvas.readonly) return;
-        if (collapsed !== undefined && this.collapsed === collapsed) return;
+        this.collapsed = !this.collapsed;
 
-        this.collapsed = collapsed || false;
-        this.node.unknownData.collapsed = collapsed || false;
+        this.node.unknownData.collapsed = !this.collapsed;
 
         this.node.canvas.requestSave(false, true);
-        this.requestSave();
-        this.updateNodesInGroup();
-        this.updateNode();
-        this.updateEdges();
-    }
-
-
-    requestSave() {
-
         const canvasCurrentData = this.node.canvas.getData();
         const nodeData = canvasCurrentData.nodes.find((node: any) => node.id === this.node.id);
         if (nodeData) {
@@ -163,17 +159,6 @@ export default class CollapseControlHeader extends Component implements HeaderCo
             this.node.canvas.setData(canvasCurrentData);
             this.node.canvas.requestSave(true);
         }, 0);
-    }
-
-    async toggleCollapsed() {
-        if (this.node.canvas.readonly) return;
-        this.collapsed = !this.collapsed;
-
-        console.log(this.node.canvas.history.data);
-
-        this.node.unknownData.collapsed = !this.collapsed;
-        this.node.canvas.requestSave(false, true);
-        this.requestSave();
 
         this.updateNodesInGroup();
         this.updateNode();
@@ -194,9 +179,13 @@ export default class CollapseControlHeader extends Component implements HeaderCo
         })
     }
 
-    updateNodesInGroup() {
+    updateNodesInGroup(expandAll?: boolean) {
         if (this.node.unknownData.type === "group" || (this.node as CanvasGroupNode).label) {
             const nodes = this.node.canvas.getContainingNodes(this.node.getBBox(true));
+
+            if (expandAll) {
+                this.collapsed = false;
+            }
 
             if (this.collapsed) {
                 nodes.filter((node: any) => node.id !== this.node.id).forEach((node: any) => {

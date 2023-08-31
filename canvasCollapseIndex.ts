@@ -5,91 +5,27 @@ import {
     CanvasGroupNode,
     CanvasNode,
     CanvasView,
-    ItemView,
     Menu,
-    MenuItem,
-    Plugin, WorkspaceLeaf
+    Plugin,
+    setIcon,
+    setTooltip
 } from 'obsidian';
 import { around } from 'monkey-around';
 import CollapseControlHeader from "./ControlHeader";
 import { CanvasData } from "obsidian/canvas";
-
-const handleMultiNodes = (canvas: Canvas, allNodes: boolean, collapse: boolean) => {
-    const nodes = allNodes ? Array.from(canvas.nodes.values()) : Array.from(canvas.selection) as any[];
-
-    if (nodes && nodes.length > 0) {
-        const canvasData = canvas.getData();
-        for (const node of nodes) {
-            if (node.unknownData.type === "group") {
-                node.headerComponent.updateNodesInGroup();
-            }
-            node.headerComponent?.setCollapsed(collapse);
-            const nodeData = canvasData.nodes.find((t: any) => t.id === node.id);
-            if (nodeData) nodeData.collapsed = collapse;
-        }
-        canvas.setData(canvasData);
-    }
-    canvas.requestSave(true);
-}
-
-const handleSingleNode = (node: CanvasNode, collapse: boolean) => {
-    if (node.unknownData.type === "group") {
-        (node.headerComponent as CollapseControlHeader).updateNodesInGroup();
-    }
-    (node.headerComponent as CollapseControlHeader).setCollapsed(collapse);
-}
-
-const handleNodesViaCommands = (plugin: CanvasCollapsePlugin, checking: boolean, allNodes: boolean, collapse: boolean) => {
-    const currentView = plugin.app.workspace.getActiveViewOfType(ItemView);
-    if (currentView && currentView.getViewType() === "canvas") {
-        if (!checking) {
-            const canvasView = currentView as any;
-            const canvas = canvasView.canvas as Canvas;
-            handleMultiNodes(canvas, allNodes, collapse);
-        }
-
-        return true;
-    }
-}
-
-const createHandleContextMenu = (section: string, callback: (isFold: boolean) => Promise<void>) => {
-    return (menu: Menu) => {
-        menu.addItem((item: MenuItem) => {
-            const subMenu = item.setSection(section).setTitle('Canvas Collapse').setIcon('chevrons-left-right').setSubmenu();
-            subMenu.addItem((item: MenuItem) => {
-                item
-                    .setIcon("fold-vertical")
-                    .setTitle("Fold Selected Nodes")
-                    .onClick(async () => {
-                        await callback(true);
-                    });
-            }).addItem((item: any) => {
-                item
-                    .setIcon("unfold-vertical")
-                    .setTitle("Expand Selected Nodes")
-                    .onClick(async () => {
-                        await callback(false);
-                    });
-            });
-        });
-    };
-}
-
-const handleSelectionContextMenu = (menu: Menu, canvas: Canvas) => {
-    const callback = async (isFold: boolean) => {
-        handleMultiNodes(canvas, false, isFold);
-    };
-    createHandleContextMenu('action', callback)(menu);
-}
-
-const handleNodeContextMenu = (menu: Menu, node: CanvasNode) => {
-    const callback = async (isFold: boolean) => {
-        handleSingleNode(node, isFold);
-    };
-    createHandleContextMenu('canvas', callback)(menu);
-}
+import {
+    getSelectionCoords,
+    handleCanvasMenu,
+    handleMultiNodesViaNodes,
+    handleNodeContextMenu,
+    handleNodesViaCommands,
+    handleSelectionContextMenu,
+    handleSingleNode, refreshAllCanvasView
+} from "./utils";
 
 export default class CanvasCollapsePlugin extends Plugin {
+    triggerByPlugin: boolean = false;
+    patchSucceed: boolean = false;
 
     async onload() {
         this.registerCommands();
@@ -97,13 +33,14 @@ export default class CanvasCollapsePlugin extends Plugin {
         this.registerCustomIcons();
 
         this.patchCanvas();
+        this.patchCanvasMenu();
         this.patchCanvasInteraction();
         this.patchCanvasNode();
     }
 
     onunload() {
         console.log('unloading plugin');
-        this.app.workspace.trigger("collapse-plugin-disabled");
+        refreshAllCanvasView(this.app);
     }
 
     registerCommands() {
@@ -133,11 +70,14 @@ export default class CanvasCollapsePlugin extends Plugin {
     }
 
     registerCanvasEvents() {
+        this.app.workspace.on("collapse-node:patched-canvas", () => {
+            refreshAllCanvasView(this.app);
+        })
         this.app.workspace.on("canvas:selection-menu", (menu, canvas) => {
-            handleSelectionContextMenu(menu, canvas);
+            handleSelectionContextMenu(this, menu, canvas);
         })
         this.app.workspace.on("canvas:node-menu", (menu, node) => {
-            handleNodeContextMenu(menu, node);
+            handleNodeContextMenu(this, menu, node);
         })
     }
 
@@ -151,27 +91,12 @@ export default class CanvasCollapsePlugin extends Plugin {
             return e.minX <= t.minX && e.minY <= t.minY && e.maxX >= t.maxX && e.maxY >= t.maxY
         }
 
-        const getSelectionCoords = (dom: HTMLElement) => {
-            const domHTML = dom.outerHTML;
+        const checkTriggerByPlugin = () => {
+            return this.triggerByPlugin;
+        }
 
-            const translateRegex = /translate\((-?\d+\.?\d*)px, (-?\d+\.?\d*)px\)/;
-            const sizeRegex = /width: (\d+\.?\d*)px; height: (\d+\.?\d*)px;/;
-            const translateMatches = domHTML.match(translateRegex);
-            const sizeMatches = domHTML.match(sizeRegex);
-            if (translateMatches && sizeMatches) {
-                const x = parseFloat(translateMatches[1]);
-                const y = parseFloat(translateMatches[2]);
-
-                const width = parseFloat(sizeMatches[1]);
-                const height = parseFloat(sizeMatches[2]);
-
-                return {
-                    minX: x,
-                    minY: y,
-                    maxX: x + width,
-                    maxY: y + height,
-                }
-            }
+        const toggleTriggerByPlugin = () => {
+            this.triggerByPlugin = !this.triggerByPlugin;
         }
 
         const patchCanvas = () => {
@@ -201,23 +126,21 @@ export default class CanvasCollapsePlugin extends Plugin {
                     },
                 requestSave: (next: any) =>
                     function (args?: boolean, triggerBySelf?: boolean) {
-                        const result = next.call(this, args);
+                        next.call(this, args);
                         if (triggerBySelf) {
                             if (args !== undefined) {
                                 this.data = this.getData();
                                 args && this.requestPushHistory(this.data);
-                                this.triggerSaveByPlugin = true;
                             }
                         }
                     },
                 pushHistory: (next: any) =>
                     function (args: CanvasData) {
-                        if (this.triggerSaveByPlugin) {
-                            this.triggerSaveByPlugin = false;
+                        if (checkTriggerByPlugin()) {
+                            toggleTriggerByPlugin();
                             return;
                         }
-                        const result = next.call(this, args);
-                        return result;
+                        return next.call(this, args);
                     },
                 selectAll: (next: any) =>
                     function (e: Set<CanvasNode>) {
@@ -225,7 +148,7 @@ export default class CanvasCollapsePlugin extends Plugin {
                             const domCoords = getSelectionCoords(this.wrapperEl.querySelector(".canvas-selection") as HTMLElement);
                             if (domCoords) {
                                 const newResult = Array.from(e).filter((t: CanvasNode) => {
-                                    if (t.unknownData.collapsed !== true) return true;
+                                    if (!t.unknownData.collapsed) return true;
                                     if (t.nodeEl.hasClass("group-nodes-collapsed")) return false;
                                     return checkCoords(domCoords, t.getBBox());
                                 });
@@ -244,7 +167,7 @@ export default class CanvasCollapsePlugin extends Plugin {
                 createTextNode: (next: any) =>
                     function (args: any) {
                         if (args.size === undefined && args.pos) {
-                            const result = next.call(this, {
+                            return next.call(this, {
                                 ...args,
                                 pos: {
                                     x: args.pos.x,
@@ -259,15 +182,13 @@ export default class CanvasCollapsePlugin extends Plugin {
                                     height: args?.size?.height || 140,
                                 }
                             });
-                            return result;
                         }
-                        const result = next.call(this, args);
-                        return result;
+                        return next.call(this, args);
                     },
                 createGroupNode: (next: any) =>
                     function (args: any) {
                         if (args.size !== undefined && args.pos) {
-                            const result = next.call(this, {
+                            return next.call(this, {
                                 ...args,
                                 pos: {
                                     x: args.pos.x,
@@ -282,15 +203,15 @@ export default class CanvasCollapsePlugin extends Plugin {
                                     height: args?.size?.height + 30,
                                 }
                             });
-                            return result;
                         }
-                        const result = next.call(this, args);
-                        return result;
-                    }
+                        return next.call(this, args);
+                    },
+
             });
             this.register(uninstaller);
+            this.patchSucceed = true;
 
-            console.log("Obsidian-Canvas-Collapsed: canvas patched");
+            console.log("Obsidian-Collapse-Node: canvas patched");
             return true;
         }
 
@@ -298,6 +219,78 @@ export default class CanvasCollapsePlugin extends Plugin {
             if (!patchCanvas()) {
                 const evt = this.app.workspace.on("layout-change", () => {
                     patchCanvas() && this.app.workspace.offref(evt);
+                });
+                this.registerEvent(evt);
+            }
+        });
+    }
+
+    patchCanvasMenu() {
+        const triggerPlugin = () => {
+            this.triggerByPlugin = true;
+        }
+
+        const patchMenu = () => {
+            const canvasView = this.app.workspace.getLeavesOfType("canvas").first()?.view;
+            if (!canvasView) return false;
+
+            const menu = (canvasView as CanvasView)?.canvas.menu;
+            if (!menu) return false;
+
+            const selection = menu.selection;
+            if (!selection) return false;
+
+            const menuUninstaller = around(menu.constructor.prototype, {
+                render: (next: any) =>
+                    function (...args: any) {
+                        const result = next.call(this, ...args);
+                        if (this.menuEl.querySelector(".collapse-node-menu-item")) return result;
+                        const buttonEl = createEl("button", "clickable-icon collapse-node-menu-item");
+                        setTooltip(buttonEl, "Fold Selected Nodes", {
+                            placement: "top",
+                        });
+                        setIcon(buttonEl, "lucide-chevrons-left-right");
+                        this.menuEl.appendChild(buttonEl);
+                        buttonEl.addEventListener("click", () => {
+                            const pos = buttonEl.getBoundingClientRect();
+                            if (!buttonEl.hasClass("has-active-menu")) {
+                                buttonEl.toggleClass("has-active-menu", true);
+                                const menu = new Menu();
+                                const containingNodes = this.canvas.getContainingNodes(this.selection.bbox);
+
+                                handleCanvasMenu(menu, async (isFold: boolean) => {
+                                    triggerPlugin();
+                                    const currentSelection = this.canvas.selection;
+                                    containingNodes.length > 1 ? handleMultiNodesViaNodes(this.canvas, containingNodes, isFold) : (currentSelection ? handleSingleNode(<CanvasNode>Array.from(currentSelection)?.first(), isFold) : "");
+                                    buttonEl.toggleClass("has-active-menu", false);
+                                });
+                                menu.setParentElement(this.menuEl).showAtPosition({
+                                    x: pos.x,
+                                    y: pos.bottom,
+                                    width: pos.width,
+                                    overlap: true
+                                })
+
+                            }
+                        });
+
+                        return result;
+                    },
+            });
+
+            this.register(menuUninstaller);
+            this.app.workspace.trigger("collapse-node:patched-canvas");
+
+            console.log("Obsidian-Collapse-Node: canvas history patched");
+            return true;
+
+        }
+
+
+        this.app.workspace.onLayoutReady(() => {
+            if (!patchMenu()) {
+                const evt = this.app.workspace.on("layout-change", () => {
+                    patchMenu() && this.app.workspace.offref(evt);
                 });
                 this.registerEvent(evt);
             }
@@ -317,23 +310,19 @@ export default class CanvasCollapsePlugin extends Plugin {
                     function (...args: any) {
                         const result = next.call(this, ...args);
                         if (!this.target) return result;
-                        if (this.target.unknownData && !this.target.nodeEl.hasClass("collapsed")) {
-                            this.interactionEl.toggleClass("collapsed-interaction", false);
+                        const isCollapsed = this.target.nodeEl.hasClass("collapsed");
+                        const isGroupNodesCollapsed = this.target.nodeEl.hasClass("group-nodes-collapsed");
+
+                        if (this.target.unknownData) {
+                            this.interactionEl.toggleClass("collapsed-interaction", isCollapsed);
                         }
-                        if (this.target.unknownData && this.target.nodeEl.hasClass("collapsed")) {
-                            this.interactionEl.toggleClass("collapsed-interaction", true);
-                        }
-                        if (this.target.nodeEl.hasClass("group-nodes-collapsed")) {
-                            this.interactionEl.toggleClass("group-nodes-collapsed", true);
-                        } else {
-                            this.interactionEl.toggleClass("group-nodes-collapsed", false);
-                        }
+                        this.interactionEl.toggleClass("group-nodes-collapsed", isGroupNodesCollapsed);
                         return result;
                     },
             });
             this.register(uninstaller);
 
-            console.log("Obsidian-Canvas-Collapsed: canvas history patched");
+            console.log("Obsidian-Collapse-Node: canvas history patched");
             return true;
         }
 
@@ -349,7 +338,7 @@ export default class CanvasCollapsePlugin extends Plugin {
 
     patchCanvasNode() {
         const initControlHeader = (node: any) => {
-            return new CollapseControlHeader(node, this.app);
+            return new CollapseControlHeader(node);
         }
 
         const patchNode = () => {
@@ -361,14 +350,17 @@ export default class CanvasCollapsePlugin extends Plugin {
 
             const node = (this.app.workspace.getLeavesOfType("canvas").first()?.view as any).canvas.nodes.values().next().value;
 
+            if (!node) return false;
             let prototype = Object.getPrototypeOf(node);
             while (prototype && prototype !== Object.prototype) {
                 prototype = Object.getPrototypeOf(prototype);
-                // @ts-expected-error Internal Method
+                // @ts-expected-error Find the parent prototype
                 if (prototype.renderZIndex) {
                     break;
                 }
             }
+
+            if (!prototype) return false;
 
             const uninstaller = around(prototype, {
                 render: (next: any) =>
@@ -407,13 +399,12 @@ export default class CanvasCollapsePlugin extends Plugin {
                         if (data.collapsed !== undefined) {
                             this.headerComponent?.setCollapsed(data.collapsed);
                         }
-                        const result = next.call(this, data);
-                        return result;
+                        return next.call(this, data);
                     }
             });
             this.register(uninstaller);
 
-            console.log("Obsidian-Canvas-Collapsed: canvas node patched");
+            console.log("Obsidian-Collapse-Node: canvas node patched");
             return true;
         }
 
