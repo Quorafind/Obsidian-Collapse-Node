@@ -2,7 +2,7 @@
 
 A plugin for [Obsidian](https://obsidian.md) that helps you collapse node in canvas.
 
-![Collapse-Node](./assets/Collapse-Node.mp4)
+![Collapse-Node](/assets/Collapse-Node.mp4)
 
 ## Usage
 
