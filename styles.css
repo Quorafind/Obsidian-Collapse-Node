@@ -83,3 +83,7 @@
 .canvas-node-collapse-control + .canvas-node-content.media-embed img {
 	height: 100%;
 }
+
+.minimal-control-header .canvas-node-collapse-control-title, .minimal-control-header .canvas-node-type-icon {
+	display: none;
+}

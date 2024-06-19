@@ -35,6 +35,7 @@ interface CollapsableNodeSettings {
 
 interface OtherSettings {
 	minLineAmount: number;
+	minimalControlHeader: boolean;
 }
 
 type CanvasCollapseSettings = CollapsableNodeSettings & OtherSettings;
@@ -47,6 +48,7 @@ const DEFAULT_SETTINGS: CanvasCollapseSettings = {
 	collapsableTextNode: true,
 
 	minLineAmount: 0,
+	minimalControlHeader: false,
 };
 
 const DynamicUpdateControlHeader = (plugin: CanvasCollapsePlugin) => {
@@ -94,6 +96,8 @@ export default class CanvasCollapsePlugin extends Plugin {
 		this.patchCanvasInteraction();
 		this.patchCanvasNode(this);
 		this.registerEditorExtension([DynamicUpdateControlHeader(this)]);
+
+		this.initGlobalCss();
 	}
 
 	onunload() {
@@ -438,6 +442,7 @@ export default class CanvasCollapsePlugin extends Plugin {
 						}
 
 						this.headerComponent = initControlHeader(this);
+						this.nodeEl.setAttribute("data-node-type", this.unknownData.type);
 						(this.containerEl as HTMLDivElement).prepend(this.headerComponent.onload());
 
 						if (this.unknownData.collapsed) {
@@ -487,6 +492,10 @@ export default class CanvasCollapsePlugin extends Plugin {
 		});
 	}
 
+	initGlobalCss() {
+		document.body.toggleClass('minimal-control-header', this.settings.minimalControlHeader);
+	}
+
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
 	}
@@ -528,6 +537,15 @@ export class CollapseSettingTab extends PluginSettingTab {
 						this.plugin.settings.minLineAmount = Number(value);
 						await this.plugin.saveSettings();
 					}
+				});
+		});
+
+		new Setting(containerEl).setName('Minimal control header').setDesc('Hide the text and also icon in the control header of the node').addToggle(toggle => {
+			toggle.setValue(this.plugin.settings.minimalControlHeader)
+				.onChange(async (value) => {
+					this.plugin.settings.minimalControlHeader = value;
+					document.body.toggleClass('minimal-control-header', value);
+					await this.plugin.saveSettings();
 				});
 		});
 	}
