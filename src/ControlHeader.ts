@@ -99,7 +99,7 @@ export default class CollapseControlHeader extends Component implements HeaderCo
 
 	initContent() {
 		this.setIconOrContent("setContent");
-		this.titleEl.setText(this.content);
+		this.titleEl.setText(this.content?.replace(/^\#{1,} /g, ''));
 	}
 
 	setIconOrContent(action: "setIcon" | "setContent") {
