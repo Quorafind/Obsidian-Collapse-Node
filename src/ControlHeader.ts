@@ -9,6 +9,7 @@ import {
 } from "obsidian";
 import { HeaderComponent } from "./types/custom";
 import { CanvasData, CanvasNodeData } from "obsidian/canvas";
+import CanvasCollapsePlugin from "./canvasCollapseIndex";
 
 export default class CollapseControlHeader extends Component implements HeaderComponent {
 	private collapsed: boolean = false;
@@ -20,13 +21,16 @@ export default class CollapseControlHeader extends Component implements HeaderCo
 	private content: string = "";
 	private node: CanvasNode;
 
-
 	private refreshed: boolean = false;
 	private containingNodes: any[] = [];
 
-	constructor(node: CanvasNode) {
+	plugin: CanvasCollapsePlugin;
+	oldFilePath: string = "";
+
+	constructor(plugin: CanvasCollapsePlugin, node: CanvasNode) {
 		super();
 
+		this.plugin = plugin;
 		this.node = node;
 		this.collapsed = node.unknownData.collapsed === undefined ? false : node.unknownData.collapsed;
 	}
@@ -38,11 +42,20 @@ export default class CollapseControlHeader extends Component implements HeaderCo
 		this.updateNodesInGroup();
 		this.updateNode();
 
+		this.registerEvent(this.plugin.app.vault.on('rename', (file, oldPath) => {
+			console.log(file, oldPath, this.node, (this.node as CanvasFileNode).file?.path);
+			if (oldPath === this.oldFilePath) {
+				this.titleEl.setText(file.name.split(".")[0]);
+				this.oldFilePath = file.path;
+			}
+		}));
+
 		return this.headerEl;
 	}
 
 	onunload() {
 		super.onunload();
+
 		this.headerEl.empty();
 		this.headerEl.detach();
 	}
@@ -96,6 +109,7 @@ export default class CollapseControlHeader extends Component implements HeaderCo
 					else setIcon(this.typeIconEl, "file-image");
 				}
 				if (action === "setContent") this.content = (this.node as CanvasFileNode).file?.name.split(".")[0];
+				this.oldFilePath = (this.node as CanvasFileNode).file?.path;
 				break;
 			case "group":
 				if (action === "setIcon") setIcon(this.typeIconEl, "create-group");

@@ -35,7 +35,7 @@ export default class CanvasCollapsePlugin extends Plugin {
 		this.patchCanvas();
 		this.patchCanvasMenu();
 		this.patchCanvasInteraction();
-		this.patchCanvasNode();
+		this.patchCanvasNode(this);
 	}
 
 	onunload() {
@@ -336,9 +336,9 @@ export default class CanvasCollapsePlugin extends Plugin {
 		});
 	}
 
-	patchCanvasNode() {
+	patchCanvasNode(plugin: CanvasCollapsePlugin) {
 		const initControlHeader = (node: any) => {
-			return new CollapseControlHeader(node);
+			return new CollapseControlHeader(plugin, node);
 		};
 
 		const patchNode = () => {
