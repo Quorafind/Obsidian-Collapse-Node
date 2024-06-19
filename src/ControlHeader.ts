@@ -56,6 +56,12 @@ export default class CollapseControlHeader extends Component implements HeaderCo
 	onunload() {
 		super.onunload();
 
+
+	}
+
+	unload() {
+		super.unload();
+
 		this.headerEl.empty();
 		this.headerEl.detach();
 	}
