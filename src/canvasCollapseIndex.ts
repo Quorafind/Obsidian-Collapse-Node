@@ -122,7 +122,7 @@ export default class CanvasCollapsePlugin extends Plugin {
 	settings: CanvasCollapseSettings;
 
 	async onload() {
-		this.loadSettings();
+		await this.loadSettings();
 		this.addSettingTab(new CollapseSettingTab(this.app, this));
 
 		this.registerCommands();
