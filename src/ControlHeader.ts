@@ -43,7 +43,6 @@ export default class CollapseControlHeader extends Component implements HeaderCo
 		this.updateNode();
 
 		this.registerEvent(this.plugin.app.vault.on('rename', (file, oldPath) => {
-			console.log(file, oldPath, this.node, (this.node as CanvasFileNode).file?.path);
 			if (oldPath === this.oldFilePath) {
 				this.titleEl.setText(file.name.split(".")[0]);
 				this.oldFilePath = file.path;
@@ -243,7 +242,6 @@ export default class CollapseControlHeader extends Component implements HeaderCo
 
 	updateEdgesInGroup(node: CanvasNode, triggerCollapsed?: boolean) {
 		const edges = this.node.canvas.getEdgesForNode(node);
-		console.log(edges);
 
 		edges.forEach((edge: any) => {
 			edge.labelElement?.wrapperEl?.classList.toggle("group-edges-collapsed", triggerCollapsed || this.collapsed);
