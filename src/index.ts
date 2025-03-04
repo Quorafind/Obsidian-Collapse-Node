@@ -1,5 +1,6 @@
 import {
 	addIcon,
+	debounce,
 	editorInfoField,
 	Plugin,
 	PluginSettingTab,
@@ -104,6 +105,8 @@ export default class CanvasCollapsePlugin extends Plugin {
 
 	settings: CanvasCollapseSettings;
 
+	headerComponents: { [key: string]: CollapseControlHeader[] } = {};
+
 	async onload() {
 		await this.loadSettings();
 		this.addSettingTab(new CollapseSettingTab(this.app, this));
@@ -203,8 +206,17 @@ export default class CanvasCollapsePlugin extends Plugin {
 		);
 	}
 
+	debounceReloadLeaves = debounce(() => {
+		const leaves = this.app.workspace.getLeavesOfType("canvas");
+		leaves.forEach((leaf) => {
+			leaf.rebuildView();
+		});
+	}, 1000);
+
 	async saveSettings() {
 		await this.saveData(this.settings);
+
+		this.debounceReloadLeaves();
 	}
 }
 

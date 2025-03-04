@@ -4,8 +4,6 @@
 
 	overflow: hidden;
 
-	width: calc(100% * var(--zoom-multiplier));
-
 	min-width: 100%;
 	height: calc(30px * var(--zoom-multiplier));
 	/*max-height: 100px;*/
@@ -18,11 +16,23 @@
 	gap: var(--size-4-3);
 	margin-top: calc(30px * var(--zoom-multiplier) * -1);
 
-	transition: background-color 0.3s ease-in-out;
+	transition: background-color 0.2s ease-in-out;
 }
 
-.canvas-node-container:has(.canvas-node-collapse-control) {
+.canvas-node-container:has(.canvas-node-content > img)
+	.canvas-node-collapse-control {
+	position: absolute;
+}
+
+.canvas-node-container:not(:has(.canvas-node-content > img)):has(
+		.canvas-node-collapse-control
+	) {
 	padding-top: calc(30px * var(--zoom-multiplier));
+}
+
+.canvas-node-container:has(.canvas-node-content > img)
+	.canvas-node-collapse-control {
+	margin-top: 0;
 }
 
 .canvas-node:not(.collapsed) .canvas-node-collapse-control {
@@ -58,7 +68,7 @@
 .canvas-node.collapsed {
 	height: calc(30px * var(--zoom-multiplier)) !important;
 	max-height: fit-content;
-	transition: height 0.3s ease-in-out, max-height 0.3s ease-in-out;
+	transition: height 0.2s ease-in-out, max-height 0.2s ease-in-out;
 }
 
 .canvas-node.collapsed .canvas-node-placeholder {
@@ -68,19 +78,19 @@
 .group-nodes-collapsed,
 .group-edges-collapsed {
 	display: none;
-	transition: opacity 0.3s ease-in-out;
+	transition: opacity 0.2s ease-in-out;
 	opacity: 0;
 }
 
 .canvas-node.collapsed .canvas-node-content {
 	display: none;
-	transition: opacity 0.3s ease-in-out;
+	transition: opacity 0.2s ease-in-out;
 	opacity: 0;
 }
 
 .collapsed-interaction {
 	height: calc(30px * var(--zoom-multiplier)) !important;
-	transition: height 0.3s ease-in-out;
+	transition: height 0.2s ease-in-out;
 }
 
 .canvas-node-collapse-control-icon,
@@ -95,7 +105,9 @@
 }
 
 .canvas-node-collapse-control + .canvas-node-content.media-embed img {
-	height: 100%;
+	height: auto;
+	max-height: 100%;
+	object-fit: contain;
 }
 
 .minimal-control-header .canvas-node-collapse-control-title,
@@ -104,29 +116,29 @@
 }
 .canvas-node {
 	/* Add transition for height and max-height only */
-	transition: height 0.3s ease-in-out, max-height 0.3s ease-in-out;
+	transition: height 0.2s ease-in-out, max-height 0.2s ease-in-out;
 }
 
 .canvas-node-content {
 	/* Add transition for opacity */
-	transition: opacity 0.3s ease-in-out;
+	transition: opacity 0.2s ease-in-out;
 	opacity: 1;
 }
 
 .canvas-node.collapsed .canvas-node-content {
 	opacity: 0;
 	/* Keep the display:none but add it with a delay so the opacity transition is visible */
-	transition: opacity 0.3s ease-in-out;
+	transition: opacity 0.2s ease-in-out;
 }
 
 /* Add rotation animation to the collapse icon */
 .canvas-node-collapse-control-icon svg {
-	transition: transform 0.3s ease;
+	transition: transform 0.2s ease;
 }
 
 .canvas-node.collapsed .canvas-node-collapse-control-icon svg {
 	transform: rotate(-90deg);
-	transition: transform 0.3s ease;
+	transition: transform 0.2s ease;
 }
 
 /* Remove hover scale effect that causes node drift */
@@ -136,26 +148,26 @@
 
 /* Animate the collapse control background */
 .canvas-node-collapse-control {
-	transition: background-color 0.3s ease-in-out;
+	transition: background-color 0.2s ease-in-out;
 }
 
 /* Modify drawer animation to prevent drift */
 .canvas-node-group .group-nodes,
 .canvas-node-group .group-edges {
-	transition: opacity 0.3s ease-in-out, max-height 0.3s ease-in-out;
+	transition: opacity 0.2s ease-in-out, max-height 0.2s ease-in-out;
 	/* Remove transform transitions that cause drift */
 }
 
 .canvas-node-group.collapsed .group-nodes-collapsed,
 .canvas-node-group.collapsed .group-edges-collapsed {
 	opacity: 0;
-	transition: opacity 0.3s ease-in-out;
+	transition: opacity 0.2s ease-in-out;
 	/* Remove transform that causes drift */
 }
 
 /* Animation classes for transitions */
 .node-transitioning {
-	transition: opacity 0.3s ease-in-out, max-height 0.3s ease-in-out !important;
+	transition: opacity 0.2s ease-in-out, max-height 0.2s ease-in-out !important;
 	/* Remove transform transition that causes drift */
 }
 
@@ -165,7 +177,7 @@
 
 /* Simplified drawer animation to prevent drift */
 .canvas-node-group .group-nodes {
-	transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out;
+	transition: max-height 0.2s ease-in-out, opacity 0.2s ease-in-out;
 	will-change: opacity, max-height;
 	/* Remove transform properties that cause drift */
 }
@@ -173,17 +185,17 @@
 .canvas-node-group.collapsed .group-nodes {
 	max-height: 0;
 	opacity: 0;
-	transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out;
+	transition: max-height 0.2s ease-in-out, opacity 0.2s ease-in-out;
 	/* Remove transform that causes drift */
 }
 
 /* Animation for edges */
 .canvas-edge {
-	transition: opacity 0.3s ease-in-out;
+	transition: opacity 0.2s ease-in-out;
 }
 
 .group-edges-collapsed {
-	transition: opacity 0.3s ease-in-out;
+	transition: opacity 0.2s ease-in-out;
 	opacity: 0;
 }
 
@@ -209,10 +221,10 @@
 
 .collapse-handler.collapsed svg {
 	transform: rotate(-90deg);
-	transition: transform 0.3s ease-in-out;
+	transition: transform 0.2s ease-in-out;
 }
 
 .collapse-handler svg {
 	transform: rotate(0deg);
-	transition: transform 0.3s ease-in-out;
+	transition: transform 0.2s ease-in-out;
 }
