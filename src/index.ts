@@ -1,31 +1,15 @@
 import {
 	addIcon,
-	Canvas,
-	CanvasCoords,
-	CanvasGroupNode,
-	CanvasNode,
-	CanvasView,
 	editorInfoField,
-	Menu,
 	Plugin,
 	PluginSettingTab,
-	setIcon,
 	Setting,
-	setTooltip,
-	ViewState,
-	WorkspaceLeaf,
 } from "obsidian";
-import { around } from "monkey-around";
 import CollapseControlHeader from "./ControlHeader";
-import { CanvasData } from "obsidian/canvas";
 import {
-	getSelectionCoords,
-	handleCanvasMenu,
-	handleMultiNodesViaNodes,
 	handleNodeContextMenu,
 	handleNodesViaCommands,
 	handleSelectionContextMenu,
-	handleSingleNode,
 	refreshAllCanvasView,
 } from "./utils";
 import { EditorView, ViewUpdate } from "@codemirror/view";
@@ -34,7 +18,6 @@ import {
 	patchCanvasInteraction,
 	patchCanvasMenu,
 	patchCanvasNode,
-	updateAllNodeWithHeader,
 } from "./patchUtils";
 
 interface CollapsableNodeSettings {
@@ -122,21 +105,23 @@ export default class CanvasCollapsePlugin extends Plugin {
 	settings: CanvasCollapseSettings;
 
 	async onload() {
-		this.loadSettings();
+		await this.loadSettings();
 		this.addSettingTab(new CollapseSettingTab(this.app, this));
 
 		this.registerCommands();
 		this.registerCanvasEvents();
 		this.registerCustomIcons();
 
-		aroundCanvasMethods(this);
-		patchCanvasMenu(this);
-		patchCanvasInteraction(this);
-		patchCanvasNode(this);
-		
 		this.registerEditorExtension([DynamicUpdateControlHeader(this)]);
 
 		this.initGlobalCss();
+
+		this.app.workspace.onLayoutReady(() => {
+			aroundCanvasMethods(this);
+			patchCanvasMenu(this);
+			patchCanvasInteraction(this);
+			patchCanvasNode(this);
+		});
 	}
 
 	onunload() {

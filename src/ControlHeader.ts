@@ -5,13 +5,16 @@ import {
 	CanvasNode,
 	CanvasTextNode,
 	Component,
-	setIcon
+	setIcon,
 } from "obsidian";
 import { HeaderComponent } from "./types/custom";
 import { CanvasData, CanvasNodeData } from "obsidian/canvas";
-import CanvasCollapsePlugin from "./canvasCollapseIndex";
+import CanvasCollapsePlugin from ".";
 
-export default class CollapseControlHeader extends Component implements HeaderComponent {
+export default class CollapseControlHeader
+	extends Component
+	implements HeaderComponent
+{
 	private collapsed: boolean = false;
 	private collapsedIconEl: HTMLDivElement;
 	private typeIconEl: HTMLDivElement;
@@ -32,7 +35,10 @@ export default class CollapseControlHeader extends Component implements HeaderCo
 
 		this.plugin = plugin;
 		this.node = node;
-		this.collapsed = node.unknownData.collapsed === undefined ? false : node.unknownData.collapsed;
+		this.collapsed =
+			node.unknownData.collapsed === undefined
+				? false
+				: node.unknownData.collapsed;
 	}
 
 	onload() {
@@ -42,20 +48,20 @@ export default class CollapseControlHeader extends Component implements HeaderCo
 		this.updateNodesInGroup();
 		this.updateNode();
 
-		this.registerEvent(this.plugin.app.vault.on('rename', (file, oldPath) => {
-			if (oldPath === this.oldFilePath) {
-				this.titleEl.setText(file.name.split(".")[0]);
-				this.oldFilePath = file.path;
-			}
-		}));
+		this.registerEvent(
+			this.plugin.app.vault.on("rename", (file, oldPath) => {
+				if (oldPath === this.oldFilePath) {
+					this.titleEl.setText(file.name.split(".")[0]);
+					this.oldFilePath = file.path;
+				}
+			})
+		);
 
 		return this.headerEl;
 	}
 
 	onunload() {
 		super.onunload();
-
-
 	}
 
 	unload() {
@@ -67,7 +73,7 @@ export default class CollapseControlHeader extends Component implements HeaderCo
 
 	initHeader() {
 		this.headerEl = createEl("div", {
-			cls: "canvas-node-collapse-control"
+			cls: "canvas-node-collapse-control",
 		});
 		this.registerDomEvent(this.headerEl, "click", async (evt) => {
 			evt.preventDefault();
@@ -76,15 +82,15 @@ export default class CollapseControlHeader extends Component implements HeaderCo
 		});
 
 		this.collapsedIconEl = this.headerEl.createEl("div", {
-			cls: "canvas-node-collapse-control-icon"
+			cls: "canvas-node-collapse-control-icon",
 		});
 
 		this.typeIconEl = this.headerEl.createEl("div", {
-			cls: "canvas-node-type-icon"
+			cls: "canvas-node-type-icon",
 		});
 
 		this.titleEl = this.headerEl.createEl("span", {
-			cls: "canvas-node-collapse-control-title"
+			cls: "canvas-node-collapse-control-title",
 		});
 	}
 
@@ -98,31 +104,47 @@ export default class CollapseControlHeader extends Component implements HeaderCo
 
 	initContent() {
 		this.setIconOrContent("setContent");
-		this.titleEl.setText(this.content?.replace(/^\#{1,} /g, ''));
+		this.titleEl.setText(this.content?.replace(/^\#{1,} /g, ""));
 	}
 
 	setIconOrContent(action: "setIcon" | "setContent") {
 		const currentType = this.checkNodeType();
 		switch (currentType) {
 			case "text":
-				if (action === "setIcon") setIcon(this.typeIconEl, "sticky-note");
-				if (action === "setContent") this.content = (this.node as CanvasTextNode).text.slice(0, 10) + ((this.node as CanvasTextNode).text.length > 10 ? "..." : "");
+				if (action === "setIcon")
+					setIcon(this.typeIconEl, "sticky-note");
+				if (action === "setContent")
+					this.content =
+						(this.node as CanvasTextNode).text.slice(0, 10) +
+						((this.node as CanvasTextNode).text.length > 10
+							? "..."
+							: "");
 				break;
 			case "file":
 				if (action === "setIcon") {
-					if ((this.node as CanvasFileNode).file.name.split(".")[1].trim() === "md") setIcon(this.typeIconEl, "file-text");
+					if (
+						(this.node as CanvasFileNode).file.name
+							.split(".")[1]
+							.trim() === "md"
+					)
+						setIcon(this.typeIconEl, "file-text");
 					else setIcon(this.typeIconEl, "file-image");
 				}
-				if (action === "setContent") this.content = (this.node as CanvasFileNode).file?.name.split(".")[0];
+				if (action === "setContent")
+					this.content = (
+						this.node as CanvasFileNode
+					).file?.name.split(".")[0];
 				this.oldFilePath = (this.node as CanvasFileNode).file?.path;
 				break;
 			case "group":
-				if (action === "setIcon") setIcon(this.typeIconEl, "create-group");
+				if (action === "setIcon")
+					setIcon(this.typeIconEl, "create-group");
 				if (action === "setContent") this.content = "";
 				break;
 			case "link":
 				if (action === "setIcon") setIcon(this.typeIconEl, "link");
-				if (action === "setContent") this.content = (this.node as CanvasLinkNode).url;
+				if (action === "setContent")
+					this.content = (this.node as CanvasLinkNode).url;
 				break;
 		}
 
@@ -130,7 +152,6 @@ export default class CollapseControlHeader extends Component implements HeaderCo
 			setIcon(this.typeIconEl, "sticky-note");
 		}
 	}
-
 
 	setCollapsed(collapsed: boolean) {
 		if (this.node.canvas.readonly) return;
@@ -166,9 +187,21 @@ export default class CollapseControlHeader extends Component implements HeaderCo
 
 		this.node.unknownData.collapsed = !this.collapsed;
 
+		// Update visual state first for animation
+		this.updateNode();
+
+		// Add delay to allow for animation to complete before updating other elements
+		setTimeout(() => {
+			// Update nodes in group after a short delay to allow animation to start
+			this.updateNodesInGroup();
+			this.updateEdges();
+		}, 50);
+
 		this.node.canvas.requestSave(false, true);
 		const canvasCurrentData = this.node.canvas.getData();
-		const nodeData = canvasCurrentData.nodes.find((node: any) => node.id === this.node.id);
+		const nodeData = canvasCurrentData.nodes.find(
+			(node: any) => node.id === this.node.id
+		);
 		if (nodeData) {
 			nodeData.collapsed = this.collapsed;
 			this.refreshHistory();
@@ -177,16 +210,17 @@ export default class CollapseControlHeader extends Component implements HeaderCo
 		setTimeout(() => {
 			this.node.canvas.setData(canvasCurrentData);
 			this.node.canvas.requestSave(true);
-		}, 0);
-
-		this.updateNodesInGroup();
-		this.updateNode();
-		this.updateEdges();
+		}, 300); // Increased timeout to match animation duration
 	}
 
 	updateNode() {
 		this.node.nodeEl.toggleClass("collapsed", this.collapsed);
-		setIcon(this.collapsedIconEl, this.collapsed ? "chevron-right" : "chevron-down");
+
+		setIcon(this.collapsedIconEl, "chevron-down");
+		this.collapsedIconEl.toggleClass(
+			["collapsed", "collapse-handler"],
+			this.collapsed
+		);
 	}
 
 	updateEdges() {
@@ -199,26 +233,64 @@ export default class CollapseControlHeader extends Component implements HeaderCo
 	}
 
 	updateNodesInGroup(expandAll?: boolean) {
-		if (this.node.unknownData.type === "group" || (this.node as CanvasGroupNode).label) {
-			const nodes = this.node.canvas.getContainingNodes(this.node.getBBox(true));
+		if (
+			this.node.unknownData.type === "group" ||
+			(this.node as CanvasGroupNode).label
+		) {
+			const nodes = this.node.canvas.getContainingNodes(
+				this.node.getBBox(true)
+			);
 
 			if (expandAll) {
 				this.collapsed = false;
 			}
 
+			// Add animation class to the group node
+			this.node.nodeEl.toggleClass("animating", true);
+
+			// Remove animation class after animation completes
+			setTimeout(() => {
+				this.node.nodeEl.toggleClass("animating", false);
+			}, 300);
+
 			if (this.collapsed) {
-				nodes.filter((node: any) => node.id !== this.node.id).forEach((node: any) => {
-					this.containingNodes.push(node);
-					node.nodeEl.toggleClass("group-nodes-collapsed", this.collapsed);
-					this.updateEdgesInGroup(node);
-				});
+				nodes
+					.filter((node: any) => node.id !== this.node.id)
+					.forEach((node: any) => {
+						this.containingNodes.push(node);
+
+						// Add transition class before changing state
+						node.nodeEl.toggleClass("node-transitioning", true);
+
+						// Apply the collapsed state
+						node.nodeEl.toggleClass(
+							"group-nodes-collapsed",
+							this.collapsed
+						);
+
+						// Remove transition class after animation completes
+						setTimeout(() => {
+							node.nodeEl.toggleClass(
+								"node-transitioning",
+								false
+							);
+						}, 300);
+
+						this.updateEdgesInGroup(node);
+					});
 			} else {
-				const otherGroupNodes = nodes.filter((node: any) => node.id !== this.node.id && node.unknownData.type === "group" && node.unknownData.collapsed);
+				const otherGroupNodes = nodes.filter(
+					(node: any) =>
+						node.id !== this.node.id &&
+						node.unknownData.type === "group" &&
+						node.unknownData.collapsed
+				);
 				// Ignore those nodes in collapsed child group
 				const ignoreNodes: any[] = [];
 				for (const groupNode of otherGroupNodes) {
 					const bbox = groupNode.getBBox(true);
-					const nodesInGroup = this.node.canvas.getContainingNodes(bbox);
+					const nodesInGroup =
+						this.node.canvas.getContainingNodes(bbox);
 					nodesInGroup.forEach((childNode: any) => {
 						if (childNode.id !== groupNode.id) {
 							ignoreNodes.push(childNode);
@@ -226,10 +298,28 @@ export default class CollapseControlHeader extends Component implements HeaderCo
 					});
 				}
 
-				this.containingNodes.filter((t) => !ignoreNodes.find((k) => k.id === t.id)).forEach((node: any) => {
-					node.nodeEl.toggleClass("group-nodes-collapsed", this.collapsed);
-					this.updateEdgesInGroup(node);
-				});
+				this.containingNodes
+					.filter((t) => !ignoreNodes.find((k) => k.id === t.id))
+					.forEach((node: any) => {
+						// Add transition class before changing state
+						node.nodeEl.toggleClass("node-transitioning", true);
+
+						// Apply the expanded state
+						node.nodeEl.toggleClass(
+							"group-nodes-collapsed",
+							this.collapsed
+						);
+
+						// Remove transition class after animation completes
+						setTimeout(() => {
+							node.nodeEl.toggleClass(
+								"node-transitioning",
+								false
+							);
+						}, 300);
+
+						this.updateEdgesInGroup(node, true);
+					});
 				ignoreNodes.forEach((node: any) => {
 					this.updateEdgesInGroup(node, node.unknownData.collapsed);
 				});
@@ -244,10 +334,22 @@ export default class CollapseControlHeader extends Component implements HeaderCo
 		const edges = this.node.canvas.getEdgesForNode(node);
 
 		edges.forEach((edge: any) => {
-			edge.labelElement?.wrapperEl?.classList.toggle("group-edges-collapsed", triggerCollapsed || this.collapsed);
-			edge.lineGroupEl.classList.toggle("group-edges-collapsed", triggerCollapsed || this.collapsed);
-			edge.lineEndGroupEl?.classList.toggle("group-edges-collapsed", triggerCollapsed || this.collapsed);
-			edge.lineStartGroupEl?.classList.toggle("group-edges-collapsed", triggerCollapsed || this.collapsed);
+			edge.labelElement?.wrapperEl?.classList.toggle(
+				"group-edges-collapsed",
+				triggerCollapsed || this.collapsed
+			);
+			edge.lineGroupEl.classList.toggle(
+				"group-edges-collapsed",
+				triggerCollapsed || this.collapsed
+			);
+			edge.lineEndGroupEl?.classList.toggle(
+				"group-edges-collapsed",
+				triggerCollapsed || this.collapsed
+			);
+			edge.lineStartGroupEl?.classList.toggle(
+				"group-edges-collapsed",
+				triggerCollapsed || this.collapsed
+			);
 		});
 	}
 }

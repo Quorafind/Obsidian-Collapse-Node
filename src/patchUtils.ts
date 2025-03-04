@@ -13,7 +13,7 @@ import {
 import { CanvasCoords } from "obsidian";
 
 import { CanvasView } from "obsidian";
-import CanvasCollapsePlugin from "./canvasCollapseIndex";
+import CanvasCollapsePlugin from ".";
 import { CanvasData } from "obsidian/canvas";
 
 import {
@@ -356,59 +356,57 @@ export const renderNodeWithHeader = (
 	plugin: CanvasCollapsePlugin,
 	node: any
 ) => {
+	// If header already exists, don't create another one
 	if (node.headerComponent) return;
 
-	if (
-		!plugin.settings.collapsableFileNode &&
-		node.unknownData.type === "file" &&
-		node.file.extension === "md"
-	)
-		return;
-	if (
-		!plugin.settings.collapsableAttachmentNode &&
-		node.unknownData.type === "file" &&
-		node.file.extension !== "md"
-	)
-		return;
-	if (
-		!plugin.settings.collapsableGroupNode &&
-		node.unknownData.type === "group"
-	)
-		return;
-	if (
-		!plugin.settings.collapsableLinkNode &&
-		node.unknownData.type === "link"
-	)
-		return;
-	if (
-		!plugin.settings.collapsableTextNode &&
-		node.unknownData.type === "text"
-	)
-		return;
+	// Check node type against plugin settings
+	const nodeType = node.unknownData.type;
 
+	// Return early if this node type is disabled in settings
+	if (
+		nodeType === "file" &&
+		node.file?.extension === "md" &&
+		!plugin.settings.collapsableFileNode
+	)
+		return;
+	if (
+		nodeType === "file" &&
+		node.file?.extension !== "md" &&
+		!plugin.settings.collapsableAttachmentNode
+	)
+		return;
+	if (nodeType === "group" && !plugin.settings.collapsableGroupNode) return;
+	if (nodeType === "link" && !plugin.settings.collapsableLinkNode) return;
+	if (nodeType === "text" && !plugin.settings.collapsableTextNode) return;
+
+	// Check minimum line amount for text and file nodes
 	if (
 		plugin.settings.minLineAmount > 0 &&
-		(node.unknownData.type === "text" || node.unknownData.type === "file")
+		(nodeType === "text" || nodeType === "file")
 	) {
-		if (
-			typeof node.text === "string" &&
-			node.text.split("\n").length < plugin.settings.minLineAmount
-		)
-			return;
-		if (
-			node.file &&
-			node.file.extension === "md" &&
-			node.child &&
-			node.child.data?.split("\n").length < plugin.settings.minLineAmount
-		)
-			return;
+		let lineCount = 0;
+
+		if (nodeType === "text" && typeof node.text === "string") {
+			lineCount = node.text.split("\n").length;
+		} else if (
+			nodeType === "file" &&
+			node.file?.extension === "md" &&
+			node.child
+		) {
+			lineCount = node.child.data?.split("\n").length || 0;
+		}
+
+		if (lineCount < plugin.settings.minLineAmount) return;
 	}
 
+	// Create header component
 	node.headerComponent = initControlHeader(
 		plugin,
 		node
 	) as CollapseControlHeader;
-	node.nodeEl.setAttribute("data-node-type", node.unknownData.type);
+	node.nodeEl.setAttribute("data-node-type", nodeType);
+
+	console.log(node, node.headerComponent);
 
 	// Wait for containerEl to be loaded before adding header
 	const addHeader = () => {
@@ -422,6 +420,7 @@ export const renderNodeWithHeader = (
 	};
 	addHeader();
 
+	// Apply collapsed state if needed
 	if (node.unknownData.collapsed) {
 		node.nodeEl.toggleClass("collapsed", true);
 		node.headerComponent.updateEdges();
@@ -468,6 +467,8 @@ export const patchCanvasNode = (plugin: CanvasCollapsePlugin) => {
 				break;
 			}
 		}
+
+		console.log(prototype);
 
 		if (!prototype) return false;
 

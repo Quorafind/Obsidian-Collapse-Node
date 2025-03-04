@@ -1,6 +1,14 @@
-import { App, Canvas, CanvasCoords, CanvasNode, ItemView, Menu, MenuItem } from "obsidian";
+import {
+	App,
+	Canvas,
+	CanvasCoords,
+	CanvasNode,
+	ItemView,
+	Menu,
+	MenuItem,
+} from "obsidian";
 import CollapseControlHeader from "./ControlHeader";
-import CanvasCollapsePlugin from "./canvasCollapseIndex";
+import CanvasCollapsePlugin from ".";
 
 const getBoundingRect = (nodes: CanvasNode[]) => {
 	const bboxArray = nodes.map((t: CanvasNode) => t.getBBox());
@@ -20,17 +28,29 @@ const getBoundingRect = (nodes: CanvasNode[]) => {
 const updateSelection = (canvas: Canvas) => {
 	if (canvas.menu.selection.bbox) {
 		const selection = Array.from(canvas.selection);
-		const currentNodesInSelection = canvas.getContainingNodes(canvas.menu.selection.bbox);
+		const currentNodesInSelection = canvas.getContainingNodes(
+			canvas.menu.selection.bbox
+		);
 		if (currentNodesInSelection.length > 0) {
-			const boundingRect = getBoundingRect(selection.length > currentNodesInSelection.length ? selection : currentNodesInSelection);
+			const boundingRect = getBoundingRect(
+				selection.length > currentNodesInSelection.length
+					? selection
+					: currentNodesInSelection
+			);
 			if (boundingRect) {
 				canvas.menu.selection.update(boundingRect);
 			}
 		}
 	}
 };
-const handleMultiNodes = (canvas: Canvas, allNodes: boolean, collapse: boolean) => {
-	const nodes = allNodes ? Array.from(canvas.nodes.values()) : Array.from(canvas.selection) as any[];
+const handleMultiNodes = (
+	canvas: Canvas,
+	allNodes: boolean,
+	collapse: boolean
+) => {
+	const nodes = allNodes
+		? Array.from(canvas.nodes.values())
+		: (Array.from(canvas.selection) as any[]);
 	const canvasData = canvas.getData();
 
 	if (nodes && nodes.length > 0) {
@@ -39,7 +59,9 @@ const handleMultiNodes = (canvas: Canvas, allNodes: boolean, collapse: boolean) 
 				node.headerComponent.updateNodesInGroup(collapse);
 			}
 			node.headerComponent?.setCollapsed(collapse);
-			const nodeData = canvasData.nodes.find((t: any) => t.id === node.id);
+			const nodeData = canvasData.nodes.find(
+				(t: any) => t.id === node.id
+			);
 			if (nodeData) nodeData.collapsed = collapse;
 		}
 		canvas.setData(canvasData);
@@ -48,16 +70,26 @@ const handleMultiNodes = (canvas: Canvas, allNodes: boolean, collapse: boolean) 
 	canvas.requestFrame();
 	updateSelection(canvas);
 };
-export const handleMultiNodesViaNodes = (canvas: Canvas, nodes: CanvasNode[], collapse: boolean) => {
+export const handleMultiNodesViaNodes = (
+	canvas: Canvas,
+	nodes: CanvasNode[],
+	collapse: boolean
+) => {
 	const canvasData = canvas.getData();
 
 	if (nodes && nodes.length > 0) {
 		for (const node of nodes) {
 			if (node.unknownData.type === "group") {
-				(node.headerComponent as CollapseControlHeader).updateNodesInGroup(collapse);
+				(
+					node.headerComponent as CollapseControlHeader
+				).updateNodesInGroup(collapse);
 			}
-			(node.headerComponent as CollapseControlHeader)?.setCollapsed(collapse);
-			const nodeData = canvasData.nodes.find((t: any) => t.id === node.id);
+			(node.headerComponent as CollapseControlHeader)?.setCollapsed(
+				collapse
+			);
+			const nodeData = canvasData.nodes.find(
+				(t: any) => t.id === node.id
+			);
 			if (nodeData) nodeData.collapsed = collapse;
 		}
 		canvas.setData(canvasData);
@@ -76,7 +108,12 @@ export const handleSingleNode = (node: CanvasNode, collapse: boolean) => {
 	node.canvas.requestSave(true, true);
 	updateSelection(node.canvas);
 };
-export const handleNodesViaCommands = (plugin: CanvasCollapsePlugin, checking: boolean, allNodes: boolean, collapse: boolean) => {
+export const handleNodesViaCommands = (
+	plugin: CanvasCollapsePlugin,
+	checking: boolean,
+	allNodes: boolean,
+	collapse: boolean
+) => {
 	plugin.triggerByPlugin = true;
 	const currentView = plugin.app.workspace.getActiveViewOfType(ItemView);
 	if (currentView && currentView.getViewType() === "canvas") {
@@ -89,44 +126,62 @@ export const handleNodesViaCommands = (plugin: CanvasCollapsePlugin, checking: b
 		return true;
 	}
 };
-const createHandleContextMenu = (section: string, callback: (isFold: boolean) => Promise<void>) => {
+const createHandleContextMenu = (
+	section: string,
+	callback: (isFold: boolean) => Promise<void>
+) => {
 	return (menu: Menu) => {
 		menu.addItem((item: MenuItem) => {
-			const subMenu = item.setSection(section).setTitle('Collapse node').setIcon('chevrons-left-right').setSubmenu();
+			const subMenu = item
+				.setSection(section)
+				.setTitle("Collapse node")
+				.setIcon("chevrons-left-right")
+				.setSubmenu();
 			handleCanvasMenu(subMenu, callback);
 		});
 	};
 };
-export const handleCanvasMenu = (subMenu: Menu, callback: (isFold: boolean) => Promise<void>) => {
-	return subMenu.addItem((item: MenuItem) => {
-		item
-			.setIcon("fold-vertical")
-			.setTitle("Fold selected nodes")
-			.onClick(async () => {
-				await callback(true);
-			});
-	}).addItem((item: any) => {
-		item
-			.setIcon("unfold-vertical")
-			.setTitle("Expand selected nodes")
-			.onClick(async () => {
-				await callback(false);
-			});
-	});
+export const handleCanvasMenu = (
+	subMenu: Menu,
+	callback: (isFold: boolean) => Promise<void>
+) => {
+	return subMenu
+		.addItem((item: MenuItem) => {
+			item.setIcon("fold-vertical")
+				.setTitle("Fold selected nodes")
+				.onClick(async () => {
+					await callback(true);
+				});
+		})
+		.addItem((item: any) => {
+			item.setIcon("unfold-vertical")
+				.setTitle("Expand selected nodes")
+				.onClick(async () => {
+					await callback(false);
+				});
+		});
 };
-export const handleSelectionContextMenu = (plugin: CanvasCollapsePlugin, menu: Menu, canvas: Canvas) => {
+export const handleSelectionContextMenu = (
+	plugin: CanvasCollapsePlugin,
+	menu: Menu,
+	canvas: Canvas
+) => {
 	plugin.triggerByPlugin = true;
 	const callback = async (isFold: boolean) => {
 		handleMultiNodes(canvas, false, isFold);
 	};
-	createHandleContextMenu('action', callback)(menu);
+	createHandleContextMenu("action", callback)(menu);
 };
-export const handleNodeContextMenu = (plugin: CanvasCollapsePlugin, menu: Menu, node: CanvasNode) => {
+export const handleNodeContextMenu = (
+	plugin: CanvasCollapsePlugin,
+	menu: Menu,
+	node: CanvasNode
+) => {
 	plugin.triggerByPlugin = true;
 	const callback = async (isFold: boolean) => {
 		handleSingleNode(node, isFold);
 	};
-	createHandleContextMenu('canvas', callback)(menu);
+	createHandleContextMenu("canvas", callback)(menu);
 };
 
 export const refreshAllCanvasView = (app: App) => {
