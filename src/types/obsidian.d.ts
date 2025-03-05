@@ -204,6 +204,11 @@ declare module "obsidian" {
         lineEndGroupEl: SVGGElement;
         lineGroupEl: SVGGElement;
 
+        labelElement: {
+            wrapperEl: HTMLElement;
+            textEl: HTMLElement;
+        };
+
         path: {
             display: SVGPathElement;
             interaction: SVGPathElement;
@@ -211,6 +216,7 @@ declare module "obsidian" {
 
         canvas: Canvas;
         bbox: CanvasCoords;
+        render(): void;
 
         unknownData: CanvasNodeUnknownData;
     }

@@ -1,23 +1,21 @@
 import {
-	CanvasFileNode,
-	CanvasGroupNode,
-	CanvasLinkNode,
-	CanvasNode,
-	CanvasTextNode,
+	type CanvasFileNode,
+	type CanvasGroupNode,
+	type CanvasLinkNode,
+	type CanvasNode,
+	type CanvasTextNode,
 	Component,
-	normalizePath,
 	parseFrontMatterAliases,
 	setIcon,
 } from "obsidian";
-import { HeaderComponent } from "./types/custom";
-import { CanvasData, CanvasNodeData } from "obsidian/canvas";
-import CanvasCollapsePlugin from ".";
+import type { HeaderComponent } from "./types/custom";
+import type CanvasCollapsePlugin from ".";
 
 export default class CollapseControlHeader
 	extends Component
 	implements HeaderComponent
 {
-	private collapsed: boolean = false;
+	private collapsed = false;
 	private collapsedIconEl: HTMLDivElement;
 	private typeIconEl: HTMLDivElement;
 	private titleEl: HTMLSpanElement;
@@ -25,16 +23,16 @@ export default class CollapseControlHeader
 	private thumbnailEl: HTMLImageElement;
 	private aliasEl: HTMLSpanElement;
 
-	private content: string = "";
+	private content = "";
 	private node: CanvasNode;
-	private alias: string = "";
-	private thumbnailUrl: string = "";
+	private alias = "";
+	private thumbnailUrl = "";
 
-	private refreshed: boolean = false;
-	private containingNodes: any[] = [];
+	private refreshed = false;
+	private containingNodes: CanvasNode[] = [];
 
 	plugin: CanvasCollapsePlugin;
-	oldFilePath: string = "";
+	oldFilePath = "";
 
 	constructor(plugin: CanvasCollapsePlugin, node: CanvasNode) {
 		super();
@@ -172,7 +170,7 @@ export default class CollapseControlHeader
 
 	initThumbnail() {
 		// Try to get thumbnail from node metadata
-		if (this.node.unknownData && this.node.unknownData.thumbnail) {
+		if (this.node.unknownData?.thumbnail) {
 			this.thumbnailUrl = this.node.unknownData.thumbnail;
 		} else {
 			// For file nodes, try to get thumbnail from frontmatter
@@ -182,11 +180,7 @@ export default class CollapseControlHeader
 					const meta = this.plugin.app.metadataCache.getFileCache(
 						fileNode.file
 					);
-					if (
-						meta &&
-						meta.frontmatter &&
-						meta.frontmatter.thumbnail
-					) {
+					if (meta?.frontmatter?.thumbnail) {
 						this.thumbnailUrl = meta.frontmatter.thumbnail;
 					}
 				} catch (e) {
@@ -305,13 +299,13 @@ export default class CollapseControlHeader
 		const history = this.node.canvas.history;
 		if (!history || history.data.length === 0) return;
 
-		history.data.forEach((data: CanvasData) => {
-			data.nodes.forEach((node: CanvasNodeData) => {
+		for (const data of history.data) {
+			for (const node of data.nodes) {
 				if (node.id === this.node.id && node?.collapsed === undefined) {
 					node.collapsed = false;
 				}
-			});
-		});
+			}
+		}
 		this.refreshed = true;
 	}
 
@@ -406,9 +400,9 @@ export default class CollapseControlHeader
 		this.node.canvas.nodeInteractionLayer.interactionEl.detach();
 		this.node.canvas.nodeInteractionLayer.render();
 		const edges = this.node.canvas.getEdgesForNode(this.node);
-		edges.forEach((edge: any) => {
+		for (const edge of edges) {
 			edge.render();
-		});
+		}
 	}
 
 	updateNodesInGroup(expandAll?: boolean) {
@@ -433,75 +427,73 @@ export default class CollapseControlHeader
 			}, 300);
 
 			if (this.collapsed) {
-				nodes
-					.filter((node: any) => node.id !== this.node.id)
-					.forEach((node: any) => {
-						this.containingNodes.push(node);
+				const filteredNodes = nodes.filter(
+					(node: CanvasNode) => node.id !== this.node.id
+				);
+				for (const node of filteredNodes) {
+					this.containingNodes.push(node);
 
-						// Add transition class before changing state
-						node.nodeEl.toggleClass("node-transitioning", true);
+					// Add transition class before changing state
+					node.nodeEl.toggleClass("node-transitioning", true);
 
-						// Apply the collapsed state
-						node.nodeEl.toggleClass(
-							"group-nodes-collapsed",
-							this.collapsed
-						);
+					// Apply the collapsed state
+					node.nodeEl.toggleClass(
+						"group-nodes-collapsed",
+						this.collapsed
+					);
 
-						// Remove transition class after animation completes
-						setTimeout(() => {
-							node.nodeEl.toggleClass(
-								"node-transitioning",
-								false
-							);
-						}, 300);
+					// Remove transition class after animation completes
+					setTimeout(() => {
+						node.nodeEl.toggleClass("node-transitioning", false);
+					}, 300);
 
-						this.updateEdgesInGroup(node);
-					});
+					this.updateEdgesInGroup(node);
+				}
 			} else {
 				const otherGroupNodes = nodes.filter(
-					(node: any) =>
+					(node: CanvasNode) =>
 						node.id !== this.node.id &&
 						node.unknownData.type === "group" &&
 						node.unknownData.collapsed
 				);
 				// Ignore those nodes in collapsed child group
-				const ignoreNodes: any[] = [];
+				const ignoreNodes: CanvasNode[] = [];
 				for (const groupNode of otherGroupNodes) {
 					const bbox = groupNode.getBBox(true);
 					const nodesInGroup =
 						this.node.canvas.getContainingNodes(bbox);
-					nodesInGroup.forEach((childNode: any) => {
+					for (const childNode of nodesInGroup) {
 						if (childNode.id !== groupNode.id) {
 							ignoreNodes.push(childNode);
 						}
-					});
+					}
 				}
 
-				this.containingNodes
-					.filter((t) => !ignoreNodes.find((k) => k.id === t.id))
-					.forEach((node: any) => {
-						// Add transition class before changing state
-						node.nodeEl.toggleClass("node-transitioning", true);
+				const filteredContainingNodes = this.containingNodes.filter(
+					(t) => !ignoreNodes.find((k) => k.id === t.id)
+				);
 
-						// Apply the expanded state
-						node.nodeEl.toggleClass(
-							"group-nodes-collapsed",
-							this.collapsed
-						);
+				for (const node of filteredContainingNodes) {
+					// Add transition class before changing state
+					node.nodeEl.toggleClass("node-transitioning", true);
 
-						// Remove transition class after animation completes
-						setTimeout(() => {
-							node.nodeEl.toggleClass(
-								"node-transitioning",
-								false
-							);
-						}, 300);
+					// Apply the expanded state
+					node.nodeEl.toggleClass(
+						"group-nodes-collapsed",
+						this.collapsed
+					);
 
-						this.updateEdgesInGroup(node, true);
-					});
-				ignoreNodes.forEach((node: any) => {
+					// Remove transition class after animation completes
+					setTimeout(() => {
+						node.nodeEl.toggleClass("node-transitioning", false);
+					}, 300);
+
+					this.updateEdgesInGroup(node, true);
+				}
+
+				for (const node of ignoreNodes) {
 					this.updateEdgesInGroup(node, node.unknownData.collapsed);
-				});
+				}
 
 				this.containingNodes = [];
 			}
@@ -512,7 +504,7 @@ export default class CollapseControlHeader
 	updateEdgesInGroup(node: CanvasNode, triggerCollapsed?: boolean) {
 		const edges = this.node.canvas.getEdgesForNode(node);
 
-		edges.forEach((edge: any) => {
+		for (const edge of edges) {
 			edge.labelElement?.wrapperEl?.classList.toggle(
 				"group-edges-collapsed",
 				triggerCollapsed || this.collapsed
@@ -529,6 +521,6 @@ export default class CollapseControlHeader
 				"group-edges-collapsed",
 				triggerCollapsed || this.collapsed
 			);
-		});
+		}
 	}
 }
