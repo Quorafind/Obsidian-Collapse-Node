@@ -312,6 +312,7 @@ export default class CollapseControlHeader
 
 	async toggleCollapsed() {
 		if (this.node.canvas.readonly) return;
+		const wasCollapsed = this.collapsed;
 		this.collapsed = !this.collapsed;
 
 		this.node.unknownData.collapsed = !this.collapsed;
@@ -331,8 +332,26 @@ export default class CollapseControlHeader
 		const nodeData = canvasCurrentData.nodes.find(
 			(node: AllCanvasNodeData) => node.id === this.node.id
 		);
+
 		if (nodeData) {
 			nodeData.collapsed = this.collapsed;
+
+			// If this node was collapsed and is now being expanded, move it to the highest z-index
+			if (wasCollapsed && !this.collapsed) {
+				// Remove the node from its current position
+				const nodeIndex = canvasCurrentData.nodes.findIndex(
+					(node: AllCanvasNodeData) => node.id === this.node.id
+				);
+				if (nodeIndex !== -1) {
+					const removedNode = canvasCurrentData.nodes.splice(
+						nodeIndex,
+						1
+					)[0];
+					// Add it back at the end of the array (highest z-index)
+					canvasCurrentData.nodes.push(removedNode);
+				}
+			}
+
 			this.refreshHistory();
 		}
 
