@@ -10,6 +10,7 @@ import {
 } from "obsidian";
 import type { HeaderComponent } from "./types/custom";
 import type CanvasCollapsePlugin from ".";
+import type { AllCanvasNodeData } from "obsidian/canvas";
 
 export default class CollapseControlHeader
 	extends Component
@@ -123,17 +124,17 @@ export default class CollapseControlHeader
 
 	initAlias() {
 		// Try to get alias from node metadata
-		if (this.node.unknownData && this.node.unknownData.alias) {
+		if (this.node.unknownData?.alias) {
 			this.alias = this.node.unknownData.alias;
 		} else {
 			// For file nodes, try to get alias from frontmatter
-			const fileNode = this.node as any;
+			const fileNode = this.node as CanvasFileNode;
 			if (fileNode.file && this.plugin.app.metadataCache) {
 				try {
 					const meta = this.plugin.app.metadataCache.getFileCache(
 						fileNode.file
 					);
-					if (meta && meta.frontmatter) {
+					if (meta?.frontmatter) {
 						const aliases = parseFrontMatterAliases(
 							meta.frontmatter
 						);
@@ -174,7 +175,7 @@ export default class CollapseControlHeader
 			this.thumbnailUrl = this.node.unknownData.thumbnail;
 		} else {
 			// For file nodes, try to get thumbnail from frontmatter
-			const fileNode = this.node as any;
+			const fileNode = this.node as CanvasFileNode;
 			if (fileNode.file && this.plugin.app.metadataCache) {
 				try {
 					const meta = this.plugin.app.metadataCache.getFileCache(
@@ -328,7 +329,7 @@ export default class CollapseControlHeader
 		this.node.canvas.requestSave(false, true);
 		const canvasCurrentData = this.node.canvas.getData();
 		const nodeData = canvasCurrentData.nodes.find(
-			(node: any) => node.id === this.node.id
+			(node: AllCanvasNodeData) => node.id === this.node.id
 		);
 		if (nodeData) {
 			nodeData.collapsed = this.collapsed;
