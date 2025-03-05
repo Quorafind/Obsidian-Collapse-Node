@@ -5,6 +5,8 @@ import {
 	CanvasNode,
 	CanvasTextNode,
 	Component,
+	normalizePath,
+	parseFrontMatterAliases,
 	setIcon,
 } from "obsidian";
 import { HeaderComponent } from "./types/custom";
@@ -20,9 +22,13 @@ export default class CollapseControlHeader
 	private typeIconEl: HTMLDivElement;
 	private titleEl: HTMLSpanElement;
 	private headerEl: HTMLElement;
+	private thumbnailEl: HTMLImageElement;
+	private aliasEl: HTMLSpanElement;
 
 	private content: string = "";
 	private node: CanvasNode;
+	private alias: string = "";
+	private thumbnailUrl: string = "";
 
 	private refreshed: boolean = false;
 	private containingNodes: any[] = [];
@@ -92,6 +98,14 @@ export default class CollapseControlHeader
 		this.titleEl = this.headerEl.createEl("span", {
 			cls: "canvas-node-collapse-control-title",
 		});
+
+		this.thumbnailEl = this.node.nodeEl.createEl("img", {
+			cls: "canvas-node-collapse-control-thumbnail",
+		});
+
+		this.aliasEl = this.headerEl.createEl("span", {
+			cls: "canvas-node-collapse-control-alias",
+		});
 	}
 
 	checkNodeType() {
@@ -105,6 +119,126 @@ export default class CollapseControlHeader
 	initContent() {
 		this.setIconOrContent("setContent");
 		this.titleEl.setText(this.content?.replace(/^\#{1,} /g, ""));
+		this.initAlias();
+		this.initThumbnail();
+	}
+
+	initAlias() {
+		// Try to get alias from node metadata
+		if (this.node.unknownData && this.node.unknownData.alias) {
+			this.alias = this.node.unknownData.alias;
+		} else {
+			// For file nodes, try to get alias from frontmatter
+			const fileNode = this.node as any;
+			if (fileNode.file && this.plugin.app.metadataCache) {
+				try {
+					const meta = this.plugin.app.metadataCache.getFileCache(
+						fileNode.file
+					);
+					if (meta && meta.frontmatter) {
+						const aliases = parseFrontMatterAliases(
+							meta.frontmatter
+						);
+						if (aliases && aliases.length > 0) {
+							this.alias = aliases[0];
+						}
+					}
+				} catch (e) {
+					console.debug("Error getting alias:", e);
+				}
+			}
+		}
+
+		if (this.alias) {
+			this.aliasEl.setText(this.alias);
+		} else {
+			this.aliasEl.detach();
+		}
+	}
+
+	updateNodeAlias(newAlias: string) {
+		this.alias = newAlias;
+
+		if (this.alias) {
+			// Re-attach if it was detached
+			if (!this.aliasEl.parentElement) {
+				this.headerEl.appendChild(this.aliasEl);
+			}
+			this.aliasEl.setText(this.alias);
+		} else {
+			this.aliasEl.detach();
+		}
+	}
+
+	initThumbnail() {
+		// Try to get thumbnail from node metadata
+		if (this.node.unknownData && this.node.unknownData.thumbnail) {
+			this.thumbnailUrl = this.node.unknownData.thumbnail;
+		} else {
+			// For file nodes, try to get thumbnail from frontmatter
+			const fileNode = this.node as any;
+			if (fileNode.file && this.plugin.app.metadataCache) {
+				try {
+					const meta = this.plugin.app.metadataCache.getFileCache(
+						fileNode.file
+					);
+					if (
+						meta &&
+						meta.frontmatter &&
+						meta.frontmatter.thumbnail
+					) {
+						this.thumbnailUrl = meta.frontmatter.thumbnail;
+					}
+				} catch (e) {
+					console.debug("Error getting thumbnail:", e);
+				}
+			}
+		}
+
+		if (this.thumbnailUrl) {
+			try {
+				// Handle both absolute and relative paths
+				const url = this.thumbnailUrl.startsWith("http")
+					? this.thumbnailUrl
+					: this.plugin.app.vault.adapter.getResourcePath(
+							this.thumbnailUrl
+					  );
+
+				this.thumbnailEl.src = url;
+			} catch (e) {
+				console.debug("Error setting thumbnail src:", e);
+				this.thumbnailEl.detach();
+			}
+		} else {
+			this.thumbnailEl.detach();
+		}
+	}
+
+	updateNodeThumbnail(newThumbnailUrl: string) {
+		this.thumbnailUrl = newThumbnailUrl;
+
+		if (this.thumbnailUrl) {
+			try {
+				// Re-attach if it was detached
+				if (!this.thumbnailEl.parentElement) {
+					this.headerEl.appendChild(this.thumbnailEl);
+				}
+
+				// Handle both absolute and relative paths
+				const url = this.thumbnailUrl.startsWith("http")
+					? this.thumbnailUrl
+					: this.plugin.app.vault.adapter.getResourcePath(
+							this.thumbnailUrl
+					  );
+
+				this.thumbnailEl.src = url;
+			} catch (e) {
+				console.debug("Error setting thumbnail src:", e);
+				this.thumbnailEl.detach();
+			}
+		} else {
+			this.thumbnailEl.detach();
+		}
 	}
 
 	setIconOrContent(action: "setIcon" | "setContent") {
@@ -221,6 +355,51 @@ export default class CollapseControlHeader
 			["collapsed", "collapse-handler"],
 			this.collapsed
 		);
+		// Handle thumbnails visibility
+		this.updateThumbnailVisibility();
+
+		// Handle aliases visibility
+		this.updateAliasVisibility();
+	}
+
+	updateThumbnailVisibility() {
+		if (this.collapsed || this.plugin.settings.showThumbnailsAlways) {
+			if (
+				this.plugin.settings.showThumbnailsInCollapsedState &&
+				this.thumbnailUrl &&
+				this.thumbnailUrl !== this.node.unknownData.title
+			) {
+				this.thumbnailEl.toggleClass("collapsed-node-hidden", false);
+				// Hide the title if we're showing an alias instead
+				this.titleEl.toggleClass("collapsed-node-hidden", true);
+			} else {
+				this.thumbnailEl.toggleClass("collapsed-node-hidden", true);
+				// Make sure title is visible if alias isn't shown
+				this.titleEl.toggleClass("collapsed-node-hidden", false);
+			}
+		} else {
+			this.thumbnailEl.toggleClass("collapsed-node-hidden", true);
+		}
+	}
+
+	updateAliasVisibility() {
+		if (this.collapsed || this.plugin.settings.showAliasesAlways) {
+			if (
+				this.plugin.settings.showAliasesInCollapsedState &&
+				this.alias &&
+				this.alias !== this.node.unknownData.title
+			) {
+				this.aliasEl.toggleClass("collapsed-node-hidden", false);
+				// Hide the title if we're showing an alias instead
+				this.titleEl.toggleClass("collapsed-node-hidden", true);
+			} else {
+				this.aliasEl.toggleClass("collapsed-node-hidden", true);
+				// Make sure title is visible if alias isn't shown
+				this.titleEl.toggleClass("collapsed-node-hidden", false);
+			}
+		} else {
+			this.aliasEl.toggleClass("collapsed-node-hidden", true);
+		}
 	}
 
 	updateEdges() {

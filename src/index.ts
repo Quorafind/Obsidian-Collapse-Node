@@ -32,6 +32,11 @@ interface CollapsableNodeSettings {
 interface OtherSettings {
 	minLineAmount: number;
 	minimalControlHeader: boolean;
+	showThumbnailsInCollapsedState: boolean;
+	showAliasesInCollapsedState: boolean;
+	showAliasesAlways: boolean;
+	showThumbnailsAlways: boolean;
+	hideDefaultNodeTitle: boolean;
 }
 
 type CanvasCollapseSettings = CollapsableNodeSettings & OtherSettings;
@@ -45,6 +50,11 @@ const DEFAULT_SETTINGS: CanvasCollapseSettings = {
 
 	minLineAmount: 0,
 	minimalControlHeader: false,
+	showThumbnailsInCollapsedState: false,
+	showAliasesInCollapsedState: false,
+	showAliasesAlways: false,
+	showThumbnailsAlways: false,
+	hideDefaultNodeTitle: false,
 };
 
 const DynamicUpdateControlHeader = (plugin: CanvasCollapsePlugin) => {
@@ -92,6 +102,8 @@ const DynamicUpdateControlHeader = (plugin: CanvasCollapsePlugin) => {
 						(node.containerEl as HTMLDivElement).prepend(
 							node.headerComponent.onload()
 						);
+
+						node.headerComponent.updateNode();
 					}
 				}
 			}
@@ -195,6 +207,10 @@ export default class CanvasCollapsePlugin extends Plugin {
 		document.body.toggleClass(
 			"minimal-control-header",
 			this.settings?.minimalControlHeader
+		);
+		document.body.toggleClass(
+			"hide-default-node-title",
+			this.settings?.hideDefaultNodeTitle
 		);
 	}
 
@@ -305,6 +321,78 @@ export class CollapseSettingTab extends PluginSettingTab {
 							"minimal-control-header",
 							value
 						);
+						await this.plugin.saveSettings();
+					});
+			});
+
+		new Setting(containerEl)
+			.setName("Show thumbnails in collapsed state")
+			.setDesc("Show thumbnails in the collapsed state of the node")
+			.addToggle((toggle) => {
+				toggle
+					.setValue(
+						this.plugin.settings.showThumbnailsInCollapsedState
+					)
+					.onChange(async (value) => {
+						this.plugin.settings.showThumbnailsInCollapsedState =
+							value;
+						await this.plugin.saveSettings();
+					});
+			});
+
+		new Setting(containerEl)
+			.setName("Show aliases in collapsed state")
+			.setDesc("Show aliases in the collapsed state of the node")
+			.addToggle((toggle) => {
+				toggle
+					.setValue(this.plugin.settings.showAliasesInCollapsedState)
+					.onChange(async (value) => {
+						this.plugin.settings.showAliasesInCollapsedState =
+							value;
+						await this.plugin.saveSettings();
+					});
+			});
+
+		new Setting(containerEl)
+			.setName("Hide default node title")
+			.setDesc("Hide the default title of the node")
+			.addToggle((toggle) => {
+				toggle
+					.setValue(this.plugin.settings.hideDefaultNodeTitle)
+					.onChange(async (value) => {
+						this.plugin.settings.hideDefaultNodeTitle = value;
+						document.body.toggleClass(
+							"hide-default-node-title",
+							value
+						);
+						await this.plugin.saveSettings();
+					});
+			});
+
+		new Setting(containerEl)
+			.setName("Show aliases always")
+			.setDesc(
+				"Show aliases always in the collapsed/expanded state of the node. Replace current title with alias."
+			)
+			.addToggle((toggle) => {
+				toggle
+					.setValue(this.plugin.settings.showAliasesAlways)
+					.onChange(async (value) => {
+						this.plugin.settings.showAliasesAlways = value;
+						await this.plugin.saveSettings();
+					});
+			});
+
+		new Setting(containerEl)
+			.setName("Show thumbnails always")
+			.setDesc(
+				"Show thumbnails always in the collapsed state of the node"
+			)
+			.addToggle((toggle) => {
+				toggle
+					.setValue(this.plugin.settings.showThumbnailsAlways)
+					.onChange(async (value) => {
+						this.plugin.settings.showThumbnailsAlways = value;
 						await this.plugin.saveSettings();
 					});
 			});

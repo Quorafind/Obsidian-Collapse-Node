@@ -114,6 +114,7 @@
 .minimal-control-header .canvas-node-type-icon {
 	display: none;
 }
+
 .canvas-node {
 	/* Add transition for height and max-height only */
 	transition: height 0.2s ease-in-out, max-height 0.2s ease-in-out;
@@ -227,4 +228,54 @@
 .collapse-handler svg {
 	transform: rotate(0deg);
 	transition: transform 0.2s ease-in-out;
+}
+
+.canvas-node .canvas-node-collapse-control-thumbnail {
+	display: none;
+}
+
+/* Styles for thumbnails and aliases in collapsed state */
+.canvas-node.collapsed .canvas-node-collapse-control-thumbnail {
+	max-width: 100%;
+	max-height: 100px;
+	object-fit: contain;
+	margin: 5px auto;
+	display: block;
+	border-radius: 4px;
+	position: absolute;
+	bottom: calc(27px * var(--zoom-multiplier));
+}
+
+.canvas-node.collapsed .canvas-node-collapse-control-alias {
+	display: block;
+	font-weight: bold;
+	text-align: center;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+
+	color: var(--text-normal);
+}
+
+/* Adjust the header to accommodate thumbnails and aliases */
+.canvas-node.collapsed .canvas-node-collapse-control {
+	display: flex;
+	flex-direction: row;
+	width: 100%;
+}
+
+/* Make sure the header elements are properly spaced in collapsed mode */
+.canvas-node .canvas-node-collapse-control-icon,
+.canvas-node .canvas-node-type-icon {
+	margin-bottom: 4px;
+}
+
+body.hide-default-node-title
+	.canvas-node:has(.canvas-node-collapse-control)
+	.canvas-node-label {
+	display: none;
+}
+
+.collapsed-node-hidden {
+	display: none !important;
 }

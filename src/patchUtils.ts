@@ -406,8 +406,6 @@ export const renderNodeWithHeader = (
 	) as CollapseControlHeader;
 	node.nodeEl.setAttribute("data-node-type", nodeType);
 
-	console.log(node, node.headerComponent);
-
 	// Wait for containerEl to be loaded before adding header
 	const addHeader = () => {
 		if (!node.containerEl) {
