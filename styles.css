@@ -279,3 +279,11 @@ body.hide-default-node-title
 .collapsed-node-hidden {
 	display: none !important;
 }
+
+
+span.canvas-node-collapse-control-title {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	max-width: 100%;
+}
