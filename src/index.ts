@@ -10,7 +10,7 @@ import CollapseControlHeader from "./ControlHeader";
 import {
 	handleNodeContextMenu,
 	handleNodesViaCommands,
-	handleSelectionContextMenu,
+	handleSelectionContextMenu, 
 	refreshAllCanvasView,
 } from "./utils";
 import { EditorView, ViewUpdate } from "@codemirror/view";

@@ -210,12 +210,18 @@ export const patchCanvasMenu = (plugin: CanvasCollapsePlugin) => {
 		plugin.triggerByPlugin = true;
 	};
 
-	const patchMenu = () => {
-		const canvasView = plugin.app.workspace
+	const patchMenu = async () => {
+		const canvasLeaf = plugin.app.workspace
 			.getLeavesOfType("canvas")
-			.first()?.view;
-		if (!canvasView) return false;
+			.first();
 
+		if (canvasLeaf?.isDeferred) {
+			await canvasLeaf.loadIfDeferred();
+		}
+
+		const canvasView = canvasLeaf?.view;
+
+		if (!canvasView) return false;
 		const menu = (canvasView as CanvasView)?.canvas.menu;
 		if (!menu) return false;
 
@@ -288,10 +294,10 @@ export const patchCanvasMenu = (plugin: CanvasCollapsePlugin) => {
 		return true;
 	};
 
-	plugin.app.workspace.onLayoutReady(() => {
-		if (!patchMenu()) {
-			const evt = plugin.app.workspace.on("layout-change", () => {
-				patchMenu() && plugin.app.workspace.offref(evt);
+	plugin.app.workspace.onLayoutReady(async () => {
+		if (!(await patchMenu())) {
+			const evt = plugin.app.workspace.on("layout-change", async () => {
+				(await patchMenu()) && plugin.app.workspace.offref(evt);
 			});
 			plugin.registerEvent(evt);
 		}
